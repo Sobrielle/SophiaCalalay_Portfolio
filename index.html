@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portfolio · Sophia Calalay</title>
+<link rel="icon" href="assets/daisy.webp" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600;6..96,700&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Poppins:wght@300;400;800&display=swap" rel="stylesheet">
+
+<!--
+ HOW THIS WORKS
+ - Everything scales with the page width using container units (1cqw = 1% of page width).
+ - Each element is placed with CSS variables:  --l (left)  --t (top)  --w (width)  --r (rotation)
+   Values are in "cqw" (percent of page width). Change them to nudge things around.
+
+ ASSETS: all images live in /assets (WebP, cropped to their visible edges).
+ Use class="crop" with --hh (height) to show only the top part of an image.
+
+ PROJECTS: folders open when their tab is clicked. Edit the DATA list at the bottom to add your work.
+ The pressed flowers tucked behind each folder's paper are set in the DECO list at the bottom.
+
+ FEATURES
+ - Mouse wheel / trackpad scroll, swipe, arrow keys and clicking a side card all flip the carousel.
+ - A .pdf in DATA becomes a flip-through magazine (click to open). Give it poster:'photo.png' for its cover photo.
+ - Filter chips: All / Graphics / Video / PDF (a chip hides itself when a folder has nothing for it).
+ - Add link:'https://...' to any entry: hovering shows a website preview, clicking opens the site.
+ - Every folder is sorted by year, then by title (A to Z). See YEAR_ORDER near the bottom.
+ NOTE: the magazine needs the site to be served over http(s) (a live host or a local
+ server such as VS Code "Live Server"); opening index.html straight from disk blocks PDF loading.
+-->
+
+<style>
+:root{
+  --plum:#6b5b7b; --lilac:#a894bb; --olive:#4d5233; --sage:#a3ab84;
+  --cream:#fcfaf5; --ink:#34323f; --night:#2c2b37;
+  --sans:'Poppins',sans-serif; --serif:'Bodoni Moda',serif; --text:'Cormorant Garamond',serif;
+  --ease:cubic-bezier(.4,0,.2,1);
+  /* faint paper grain */
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .25 0 0 0 .10 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--cream);color:var(--ink);font-family:var(--sans);overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+a:focus-visible,button:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
+[hidden]{display:none!important}
+
+/* The scaling canvas */
+.page{container:page / inline-size;max-width:1600px;margin:0 auto;background:var(--cream)}
+.sec{position:relative;width:100%;height:calc(var(--h)*1cqw)}
+
+/* Placed image + placed text (--s = extra shift when folders above are open) */
+.el,.txt,.tab{position:absolute;left:calc(var(--l)*1cqw);top:calc((var(--t) + var(--s,0))*1cqw)}
+.el{width:calc(var(--w)*1cqw);height:auto;rotate:var(--r,0deg);transition:scale .25s ease,opacity .3s;transform-origin:center}
+.txt{white-space:nowrap}
+
+/* Hover enlarge */
+.crop{height:calc(var(--hh)*1cqw);object-fit:cover;object-position:top}
+.hz{cursor:zoom-in}
+.hz:hover,.hz:focus-visible{scale:1.14;z-index:99}
+@media (prefers-reduced-motion:reduce){.el{transition:none}.projects{transition:none!important}}
+
+/* ---------- HERO ---------- */
+/* Full-bleed: the colour keeps extending past the 1600px content width when zoomed out */
+.hero{background:var(--night);--h:56.2;box-shadow:0 0 0 100vmax var(--night);clip-path:inset(0 -100vmax)}
+/* Soft gradient highlight (same effect as the folder bands), also stretched edge to edge */
+.hero::before{content:"";position:absolute;inset:0 -100vmax;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,0) 55%),var(--night)}
+.big{font:800 calc(11.5*1cqw)/1 var(--sans);letter-spacing:-.045em}
+.hero .port{color:#fff}
+.hero .folio{font-family:var(--serif);font-weight:600;color:#000;letter-spacing:-.05em}
+.hero .motto{font:400 clamp(9px,1.7cqw,26px) var(--text);color:#fff;opacity:.85}
+.byline{position:absolute;left:55.3cqw;top:31.5cqw;width:23.8cqw;padding:.8cqw 0 .8cqw 2.2cqw;rotate:4deg;
+  background:var(--plum);color:#fff;border-radius:1.6cqw;font:400 2.2cqw var(--text);letter-spacing:.05em}
+.spine{position:absolute;left:16.2cqw;display:flex;align-items:center;justify-content:center;width:2.4cqw;
+  writing-mode:vertical-rl;rotate:180deg;color:#ddd;border-radius:0 .6cqw .6cqw 0;
+  font:400 clamp(7px,1.1cqw,16px) var(--serif);letter-spacing:.010em;text-transform:uppercase}
+.spine:hover{background:var(--plum)}
+
+/* ---------- ABOUT ---------- */
+.about{--h:53.6;z-index:2}
+.paper-wrap{display:contents}
+.about h2{font:800 calc(10.5*1cqw)/1 var(--sans);letter-spacing:-.05em;color:var(--plum)}
+.about h2 span{font-family:var(--serif);font-weight:600;letter-spacing:-.04em}
+.degree{font:500 2.3cqw/1.3 var(--text);white-space:normal!important;width:47cqw}
+.info{position:absolute;left:calc(var(--l)*1cqw);top:calc(var(--t)*1cqw);width:38cqw}
+.bio{font:300 1.45cqw/1.6 var(--sans);letter-spacing:.03em;text-align:justify}
+.skills{margin-top:1.8cqw;display:grid;grid-template-columns:1fr 1fr;gap:1.4cqw 2.6cqw}
+.skill{font:400 1.55cqw var(--sans);letter-spacing:.04em;white-space:nowrap}
+.bar{margin-top:.6cqw;height:1.8cqw;border-radius:1cqw;border:.15cqw solid var(--plum);background:#fff8;overflow:hidden}
+.bar::before{content:"";display:block;height:100%;width:calc(var(--v)*1%);background:var(--plum);border-radius:1cqw}
+
+/* ---------- PROJECTS ----------
+   Layer order (back to front): sage band 10 · panel 11 · PROJ 20 · cream band 30 · panel 31 ·
+   ECTS 40 · lilac band 50 · panel 51 · dark band 60 · panel 61 · "Made by me" 70 · tabs 80 · images 90
+   Folder k opens by --ek (in cqw). Everything below it shifts down by that amount:
+   class f1 = no shift, f2 = shifts when folder 1 is open, f3 = folders 1+2, and so on. */
+@property --e1{syntax:'<number>';inherits:true;initial-value:0}
+@property --e2{syntax:'<number>';inherits:true;initial-value:0}
+@property --e3{syntax:'<number>';inherits:true;initial-value:0}
+@property --e4{syntax:'<number>';inherits:true;initial-value:0}
+.projects{--e:50;--h:calc(34.5 + var(--e1) + var(--e2) + var(--e3) + var(--e4));overflow:visible;
+  transition:--e1 .6s var(--ease),--e2 .6s var(--ease),--e3 .6s var(--ease),--e4 .6s var(--ease)}
+.projects[data-open=org]{--e1:var(--e)}
+.projects[data-open=school]{--e2:var(--e)}
+.projects[data-open=comm]{--e3:var(--e)}
+.projects[data-open=personal]{--e4:var(--e)}
+.f1{--s:0}
+.f2{--s:var(--e1)}
+.f3{--s:calc(var(--e1) + var(--e2))}
+.f4{--s:calc(var(--e1) + var(--e2) + var(--e3))}
+.f5{--s:calc(var(--e1) + var(--e2) + var(--e3) + var(--e4))}
+/* small decorations fade out while their own folder is open */
+.projects[data-open=org] .d1,.projects[data-open=school] .d2,
+.projects[data-open=comm] .d3,.projects[data-open=personal] .d4{opacity:0;pointer-events:none}
+
+.band{position:absolute;left:0;width:100%;top:calc((var(--t) + var(--s,0))*1cqw);height:calc((var(--h) + var(--ex,0))*1cqw);
+  background:var(--bg);z-index:var(--z,1);clip-path:inset(-3cqw -100vmax 0 -100vmax)}
+/* Full-bleed: stretches the band's colour (and its shadow) to the screen edges, with a soft gradient highlight */
+.band::before{content:"";position:absolute;inset:0 -100vmax;background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0) 55%),var(--bg);box-shadow:0 -.45cqw 1.2cqw rgba(0,0,0,.28)}
+.tab{width:calc(var(--w)*1cqw);height:4.6cqw;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,0) 60%),var(--bg);
+  border:1px solid rgba(255,255,255,.4);border-bottom:0;
+  color:var(--c,#fff);border-radius:2.6cqw 2.6cqw 0 0;
+  font:400 clamp(9px,2cqw,30px) var(--serif);letter-spacing:-.03em;text-transform:uppercase;z-index:80;
+  box-shadow:0 -.3cqw .9cqw -.1cqw rgba(0,0,0,.3);clip-path:inset(-3cqw -3cqw 0 -3cqw)}
+.tab:hover{filter:brightness(1.1)}
+.tab[data-k]{cursor:pointer}
+.projects .el{z-index:90}
+.projects .p1{font:800 calc(11.5*1cqw)/1 var(--sans);letter-spacing:-.045em;color:var(--olive);z-index:20}
+.projects .p2{font:800 calc(11.5*1cqw)/1 var(--sans);letter-spacing:-.045em;color:var(--plum);z-index:40}
+.made{font:400 4.7cqw/1 var(--serif);letter-spacing:-.06em;color:#eee6f3;text-transform:uppercase;z-index:70;transition:opacity .3s}
+
+/* Folder panel: a torn paper page tucked into the folder, with frosted glass cards
+   --sheet = colour of the second sheet behind the page, --tape = second tint colour (used for the colour wash behind the glass) */
+.panel{--pad:5cqw;position:absolute;left:0;width:100%;z-index:var(--z);
+  top:calc((var(--t) + var(--s,0) + 1.4)*1cqw);height:max(0px,calc((var(--h) + var(--ex,0) - 11)*1cqw));
+  color:var(--plum);visibility:hidden;opacity:0;transition:opacity .25s,visibility 0s .25s}
+.panel.open{visibility:visible;opacity:1;transition:opacity .4s .3s}
+.stack{position:absolute;inset:0 var(--pad);z-index:2;filter:drop-shadow(0 .7cqw 1.3cqw rgba(30,22,40,.32))}
+.sheet,.paper{position:absolute;inset:0}
+.sheet{background:var(--sheet);rotate:-.7deg;translate:.5cqw .5cqw;
+  clip-path:polygon(0.8% 0.9%,6% 1.8%,12% 0.7%,20% 1.9%,29% 0.8%,38% 1.7%,47% 0.6%,56% 1.8%,66% 0.7%,75% 1.9%,84% 0.8%,92% 1.7%,99.8% 1.2%,99.2% 14%,99.9% 28%,99.1% 42%,99.8% 57%,99.2% 71%,99.9% 86%,99.3% 99.2%,91% 98.1%,82% 99.4%,72% 98.2%,63% 99.5%,52% 98.1%,43% 99.4%,33% 98.2%,24% 99.5%,15% 98.1%,6% 99.3%,0.3% 98.4%,0.9% 84%,0.2% 68%,0.9% 52%,0.1% 36%,0.8% 20%,0.2% 7%)}
+.paper{display:flex;flex-direction:column;gap:1.1cqw;padding:2.4cqw 3cqw 1.8cqw;
+  background:
+    radial-gradient(36% 52% at 20% 60%,color-mix(in srgb,var(--tape) 55%,transparent),transparent 72%),
+    radial-gradient(36% 52% at 82% 42%,color-mix(in srgb,var(--sheet) 90%,transparent),transparent 72%),
+    var(--grain),linear-gradient(160deg,#f8f5ed,#eee9db);
+  clip-path:polygon(0.4% 1.8%,3.5% 0.5%,8% 1.7%,13% 0.6%,19% 1.5%,26% 0.4%,33% 1.6%,41% 0.5%,49% 1.7%,57% 0.4%,65% 1.5%,72% 0.6%,80% 1.7%,87% 0.5%,94% 1.6%,99.6% 0.8%,99.1% 10%,99.9% 22%,99.2% 35%,99.8% 49%,99.1% 63%,99.8% 77%,99.2% 90%,99.7% 99%,93% 98.3%,86% 99.6%,78% 98.4%,70% 99.7%,62% 98.3%,54% 99.6%,46% 98.5%,38% 99.7%,30% 98.4%,22% 99.6%,14% 98.5%,7% 99.7%,0.5% 98.8%,0.9% 88%,0.1% 75%,0.8% 61%,0.2% 47%,0.9% 33%,0.1% 19%,0.7% 8%)}
+/* pressed flowers tucked behind the paper edge */
+.pd{position:absolute;z-index:1;pointer-events:none;height:auto;filter:drop-shadow(0 .3cqw .5cqw rgba(0,0,0,.25))}
+
+/* Filter labels */
+.chips{display:flex;gap:.8cqw;flex-wrap:wrap}
+.chip{font:400 clamp(8px,.95cqw,13px) var(--sans);letter-spacing:.14em;text-transform:uppercase;padding:.6em 1.6em;border-radius:99px;
+  border:1px solid var(--plum);background:transparent;color:var(--plum);cursor:pointer;transition:background .25s,color .25s}
+.chip:hover{background:rgba(107,91,123,.14)}
+.chip.on{background:var(--plum);color:#fff}
+
+.stage{position:relative;flex:1;min-height:0;touch-action:pan-y;perspective:1600px}
+/* Frosted glass cards: a thin translucent frame wraps the file, so the file keeps its own shape (sizes are set by the script) */
+.card{--cr:clamp(10px,1.5cqw,22px);position:absolute;left:50%;top:50%;margin:0;cursor:pointer;border-radius:var(--cr);
+  background:linear-gradient(135deg,rgba(255,255,255,.62),rgba(255,255,255,.2));
+  border:1px solid rgba(255,255,255,.9);
+  -webkit-backdrop-filter:blur(10px) saturate(150%);backdrop-filter:blur(10px) saturate(150%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.3),0 .9cqw 2.2cqw rgba(60,40,80,.3);
+  transition:transform .55s var(--ease),opacity .45s}
+.card.on{box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.3),0 1.2cqw 3cqw rgba(60,40,80,.42)}
+.ph{display:block;position:relative;width:100%;height:100%;overflow:hidden;border-radius:calc(var(--cr)*.6);background:#fff}
+.ph::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.26),rgba(255,255,255,0) 36%)}
+.ph .media{width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none}
+.play{position:absolute;left:5%;bottom:4%;z-index:1;width:clamp(26px,3.2cqw,46px);aspect-ratio:1;display:grid;place-items:center;
+  border-radius:50%;background:rgba(52,50,63,.7);color:#fff;font-size:clamp(10px,1.2cqw,16px);padding-left:.15em;border:1px solid rgba(255,255,255,.6)}
+/* small pill on cards that open a magazine or a website */
+.badge{position:absolute;right:4%;bottom:4%;z-index:1;pointer-events:none;
+  font:400 clamp(8px,.9cqw,12px) var(--sans);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;
+  padding:.55em 1.2em;border-radius:99px;background:rgba(52,50,63,.75);color:#fff;border:1px solid rgba(255,255,255,.6)}
+
+.nav-row{display:flex;align-items:center;justify-content:center;gap:2.4cqw}
+.cap{text-align:center;width:min(48cqw,100%);display:flex;flex-direction:column;align-items:center;gap:.3cqw}
+/* Title uses the same font as the "PORT" word in the header (Poppins ExtraBold, tight spacing) */
+.cap b{font:800 clamp(15px,2.1cqw,30px)/1.1 var(--sans);letter-spacing:-.045em;color:var(--ink)}
+/* Your short description (reserves two lines so the layout doesn't jump) */
+.cap .desc{font:italic 500 clamp(12px,1.55cqw,20px)/1.4 var(--text);min-height:2.8em;color:var(--plum)}
+.dots{display:flex;gap:.5cqw;margin-top:.2cqw;min-height:6px}
+.dots i{display:block;width:.55cqw;min-width:5px;aspect-ratio:1;border-radius:99px;background:var(--plum);opacity:.35;transition:width .3s,opacity .3s}
+.dots i.on{width:1.8cqw;min-width:16px;opacity:.95}
+
+/* Pop-up viewer for graphics (shows at its own size, only shrinking if bigger than the screen).
+   margin:auto keeps it centred (the page-wide reset removes the default centring) */
+dialog{border:0;padding:0;margin:auto;background:transparent;max-width:none;max-height:none;overflow:visible}
+dialog::backdrop{background:rgba(20,18,26,.85)}
+.lbc{display:grid;place-items:center}
+.lbc img{max-width:92vw;max-height:84vh;display:block;border-radius:12px}
+.hint{color:#fff;font:300 15px var(--sans);padding:2rem;max-width:80vw;text-align:center}
+.x{position:fixed;top:14px;right:18px;width:42px;height:42px;border-radius:50%;border:0;background:#fff;color:var(--ink);font-size:24px;cursor:pointer}
+
+/* Magazine viewer (page-flip book) */
+.magcol{display:flex;flex-direction:column;align-items:center;gap:14px;padding:6px}
+.book{position:relative}
+.magmsg{color:#fff;font:300 15px var(--sans);padding:2rem;text-align:center;max-width:80vw}
+.magmsg a{color:#fff;text-decoration:underline}
+.magmsg small{display:block;margin-top:10px;opacity:.65;font-size:12px}
+.magbar{display:flex;align-items:center;gap:18px;color:#fff;font:300 13px var(--sans);letter-spacing:.1em}
+.mnav{width:44px;height:44px;border-radius:50%;border:0;background:var(--plum);color:#fff;font:400 24px/1 var(--serif);padding-bottom:3px;cursor:pointer;transition:background .2s}
+.mnav:hover{background:#7c6a8f}
+
+/* Website preview that follows the pointer when hovering a card that has a link */
+.linkprev{position:fixed;left:0;top:0;z-index:1000;width:320px;max-width:80vw;pointer-events:none;
+  border-radius:12px;overflow:hidden;background:#fff;border:1px solid rgba(255,255,255,.9);
+  box-shadow:0 12px 32px rgba(30,22,40,.4);opacity:0;visibility:hidden;transition:opacity .15s,visibility 0s .15s}
+.linkprev.on{opacity:1;visibility:visible;transition:opacity .15s}
+.linkprev .shot{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top;background:#ece9df}
+.linkprev.err .shot{display:none}
+.lpbar{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;font:400 11px var(--sans);letter-spacing:.04em;color:var(--ink)}
+.lpbar span:last-child{color:var(--plum)}
+
+/* ---------- CONTACTS ---------- */
+.contact{--h:10;display:grid;grid-template-columns:1fr 1fr;align-content:center;gap:1.4cqw 4cqw;padding:0 10cqw}
+.contact p{font:300 1.6cqw var(--sans);display:flex;gap:2cqw;align-items:baseline;flex-wrap:wrap}
+.contact b{font-weight:800;text-transform:uppercase;letter-spacing:-.01em}
+.contact a:hover{color:var(--plum)}
+
+/* ---------- RESUME PEEK (below the contact details) ---------- */
+.resume{width:100%;display:flex;flex-direction:column;align-items:center;gap:1.4cqw;padding:1cqw 0 6cqw}
+.resume-card{position:relative;display:block;width:24cqw;height:15cqw;overflow:hidden;border-radius:1.2cqw;
+  background:#f4f0e6;border:1px solid rgba(107,91,123,.35);box-shadow:0 .8cqw 2cqw rgba(60,40,80,.25);
+  transition:transform .3s var(--ease),box-shadow .3s}
+.resume-card:hover,.resume-card:focus-visible{transform:translateY(-.4cqw);box-shadow:0 1.2cqw 2.8cqw rgba(60,40,80,.38)}
+.resume-card img{position:relative;z-index:1;width:100%;height:100%;display:block;object-fit:cover;object-position:top}
+.resume-card .rf{position:absolute;inset:0;display:grid;place-items:center;font:600 2.4cqw var(--serif);color:var(--plum)}
+/* soft fade at the bottom so it looks like a peek of the page */
+.resume-card::after{content:"";position:absolute;inset:auto 0 0 0;height:35%;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.92))}
+.resume-label{font:400 1.2cqw var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--plum)}
+.resume-label a:hover{text-decoration:underline}
+
+/* ---------- MOBILE: stack the About + Contact sections, taller folder panels ---------- */
+@container page (max-width:700px){
+  .resume-card{width:70cqw;height:44cqw}
+  .resume-card .rf{font-size:7cqw}
+  .resume-label{font-size:3.2cqw}
+  .projects{--e:125}
+  .panel{--pad:3cqw}
+  .paper{padding:4cqw 4cqw 3cqw;gap:2.4cqw}
+  .pd{display:none}
+  .chip{font-size:2.6cqw}
+  .nav-row{gap:3cqw}
+  .cap{width:auto;flex:1}
+  .tab{font-size:2.4cqw}
+  .about{height:auto;display:flex;flex-direction:column;align-items:center;gap:6cqw;padding:10cqw 7cqw 10cqw;text-align:center}
+  .about .el,.about .txt,.about .info{position:static;width:auto;left:auto;top:auto}
+  .paper-wrap{display:block;width:100%;background:#ece9df;padding:7cqw 6cqw;border-radius:2cqw}
+  .about h2{font-size:17cqw;text-align:center}
+  .degree{font-size:5.4cqw;width:auto;margin:3cqw 0}
+  .bio{font-size:3.8cqw;width:auto;margin-bottom:5cqw;text-align:left}
+  .skill{font-size:3.4cqw;text-align:left;white-space:normal}
+  .bar{height:3.6cqw}
+  .about .id{width:70cqw}
+  .about .apps{width:70cqw;order:3}
+  .about .deco{display:none}
+  .contact{height:auto;grid-template-columns:1fr;padding:6cqw 7cqw}
+  .contact p{font-size:3.8cqw}
+}
+</style>
+</head>
+<body>
+<main class="page">
+
+<!-- ============ HERO ============ -->
+<header class="sec hero" id="top">
+  <img class="el" style="--l:4.8;--t:3.7;--w:93.4;z-index:1" src="assets/book.webp" alt="">
+  <img class="el" style="--l:19.8;--t:15;--w:23.8;z-index:2" src="assets/header-paper.webp" alt="">
+  <img class="el hz" style="--l:1.8;--t:2.2;--w:10.2;z-index:2" src="assets/daisy.webp" alt="Pressed daisy">
+  <img class="el hz" style="--l:6.6;--t:18.3;--w:11.7;z-index:3" src="assets/fern.webp" alt="Pressed fern">
+  <img class="el hz" style="--l:78.7;--t:23.4;--w:18.7;z-index:5" src="assets/lavender.webp" alt="Dried lavender">
+  <img class="el hz" style="--l:75.4;--t:9.1;--w:15.8;z-index:3" src="assets/photo2.webp" alt="Portrait photo">
+  <img class="el hz" style="--l:9.5;--t:35;--w:15.7;z-index:3" src="assets/photo1.webp" alt="Photo in the park">
+  <img class="el hz" style="--l:70.3;--t:4.8;--w:9.9;z-index:5" src="assets/dog-cholo.webp" alt="Cholo the shih tzu">
+  <img class="el hz" style="--l:22.3;--t:39.9;--w:12.4;z-index:5" src="assets/dog-bamba.webp" alt="Bamba the maltese">
+
+  <span class="txt motto" style="--l:26;--t:20.5;z-index:3; font-size: 30px;">in omnia paratus</span>
+  <h1 class="txt big port" style="--l:21.2;--t:22.2;z-index:4">PORT</h1>
+  <span class="txt big folio" style="--l:51.2;--t:22.2;z-index:4" aria-hidden="true">FOLIO</span>
+  <span class="byline" style="z-index:4">by Sophia Calalay</span>
+
+  <a class="spine" style="top:18.7cqw;height:5cqw;z-index:4" href="#about">About</a>
+  <a class="spine" style="top:12.4cqw;height:5cqw;z-index:4" href="#projects">Project</a>
+  <a class="spine" style="top:6.6cqw;height:5cqw;z-index:4" href="#contact">Contact</a>
+</header>
+
+<!-- ============ ABOUT ============ -->
+<section class="sec about" id="about">
+  <img class="el deco" style="--l:23.4;--t:3.4;--w:67.7" src="assets/about-paper.webp" alt="">
+  <img class="el deco" style="--l:24;--t:10;--w:26" src="assets/about-ghost.webp" alt="">
+  <img class="el deco hz" style="--l:89.5;--t:-2;--w:11" src="assets/leaf.webp" alt="Pressed leaf">
+  <img class="el deco hz" style="--l:3;--t:15.9;--w:10.5;z-index:1" src="assets/about-fern.webp" alt="">
+  <img class="el id hz" style="--l:8;--t:-2.8;--w:25.3;z-index:2" src="assets/about-id.webp" alt="ID card: Sophia Gabrielle Santiago Calalay, born Aug 08, 2004">
+
+  <div class="paper-wrap">
+    <h2 class="txt" style="--l:29.6;--t:3">ABOUT <span>ME</span></h2>
+    <p class="txt degree" style="--l:33.3;--t:15.2">Bachelor of Science in Information Technology with specialization in Web and Mobile Application</p>
+    <div class="info" style="--l:35.5;--t:20.6">
+      <p class="bio">with hands-on experience in front-end and back-end development. Experienced in leading and collaborating on both technical project, creative background, and multimedia production through strengths in communication, teamwork, creativity and coordination.</p>
+      <div class="skills">
+        <div class="skill">Teamwork<div class="bar" style="--v:95"></div></div>
+        <div class="skill">Creativity<div class="bar" style="--v:92"></div></div>
+        <div class="skill">Fast Leaner<div class="bar" style="--v:90"></div></div>
+        <div class="skill">Time Management<div class="bar" style="--v:92"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <img class="el apps hz" style="--l:75.5;--t:19.5;--w:21.4;--r:2deg" src="assets/about-apps.webp" alt="Graphic designer: Illustrator, Premiere, Canva, Figma, CapCut, Photoshop, VS Code">
+</section>
+
+<!-- ============ PROJECTS ============ -->
+<section class="sec projects" id="projects" data-open="">
+  <div class="band f1" style="--t:7.3;--h:6.6;--ex:var(--e1);--z:10;--bg:var(--sage)"></div>
+  <div class="band f2" style="--t:13.9;--h:6.6;--ex:var(--e2);--z:30;--bg:#fbf8f1"></div>
+  <div class="band f3" style="--t:20.4;--h:6.2;--ex:var(--e3);--z:50;--bg:var(--lilac)"></div>
+  <div class="band f4" style="--t:26.6;--h:7.9;--ex:var(--e4);--z:60;--bg:var(--ink)"></div>
+
+  <!-- Folder panels (filled in by the script at the bottom).
+       --sheet = colour of the second sheet of paper behind the page, --tape = second tint used for the colour wash behind the glass cards -->
+  <div class="panel f1" data-k="org"      style="--t:7.3; --h:6.6;--ex:var(--e1);--z:11;--sheet:#cdd4ae;--tape:#a894bb"></div>
+  <div class="panel f2" data-k="school"   style="--t:13.9;--h:6.6;--ex:var(--e2);--z:31;--sheet:#e4d8ee;--tape:#a3ab84"></div>
+  <div class="panel f3" data-k="comm"     style="--t:20.4;--h:6.2;--ex:var(--e3);--z:51;--sheet:#d7c8e6;--tape:#b7be9a"></div>
+  <div class="panel f4" data-k="personal" style="--t:26.6;--h:7.9;--ex:var(--e4);--z:61;--sheet:#e6d3dc;--tape:#a894bb"></div>
+
+  <span class="txt p1 f2" style="--l:24.5;--t:4.5">PROJ</span>
+  <span class="txt p2 f3" style="--l:32.5;--t:11.5">ECTS</span>
+  <span class="txt made f3 d3" style="--l:42.8;--t:22.6">Made by me, myself, and I</span>
+
+  <!-- Tabs: click to open or close a folder -->
+  <a class="tab f1" data-k="org"      role="button" aria-expanded="false" href="#organizations" style="--l:76.5;--t:2.7;--w:18;--bg:var(--sage)">Organizations</a>
+  <a class="tab f2" data-k="school"   role="button" aria-expanded="false" href="#school"        style="--l:5.9;--t:9.7;--w:19;--bg:#fbf8f1;--c:var(--plum)">School Works</a>
+  <a class="tab f3" data-k="comm"     role="button" aria-expanded="false" href="#commissions"   style="--l:59.7;--t:15.8;--w:19;--bg:var(--lilac)">Commissions</a>
+  <a class="tab f4" data-k="personal" role="button" aria-expanded="false" href="#personal"      style="--l:23;--t:22;--w:18.7;--bg:var(--ink)">Personal</a>
+  <a class="tab f5" style="--l:65.5;--t:30.1;--w:19;--bg:#fcfaf5;--c:var(--plum)">Contacts</a>
+
+  <!-- Organizations (fade out while the Organizations folder is open) -->
+  <img class="el hz f1 d1" style="--l:65.6;--t:7.3;--w:2.5" src="assets/org-pen.webp" alt="Publication pen">
+  <img class="el hz f1 d1" style="--l:69.5;--t:8;--w:5.5" src="assets/org-scc.webp" alt="Student council badge">
+  <img class="el hz crop f1 d1" style="--l:75;--t:8.1;--w:9.2;--hh:5.8" src="assets/org-holidays.webp" alt="Happy Holidays greeting">
+  <img class="el hz crop f1 d1" style="--l:89.7;--t:5.8;--w:10.3;--hh:8" src="assets/daisy.webp" alt="Pressed daisy">
+  <img class="el hz f2 d2" style="--l:.6;--t:8.8;--w:6.2;z-index:20" src="assets/org-adeo.webp" alt="Adeodatus SHS Publication logo">
+  <!-- School works -->
+  <img class="el hz crop f2 d2" style="--l:15.4;--t:13.9;--w:8;--hh:6.5;z-index:90" src="assets/school-logo.webp" alt="FEU Institute of Technology logo">
+  <img class="el hz f3 d3" style="--l:81.3;--t:15;--w:14.3;z-index:80" src="assets/school-savr.webp" alt="SAVR logo">
+  <!-- Commissions -->
+  <img class="el hz crop f3 d3" style="--l:5;--t:20;--w:8.5;--hh:7.4;z-index:50" src="assets/flower-lace.webp" alt="Pressed flower">
+  <!-- Personal -->
+  <img class="el hz f4 d4" style="--l:59.8;--t:25.6;--w:8.4" src="assets/flower-purple.webp" alt="Pressed larkspur">
+  <img class="el hz crop f4 d4" style="--l:14.2;--t:24.6;--w:8.4;--hh:9.9;" src="assets/personal-jessie.webp" alt="Birthday invitation layout">
+  <img class="el hz crop f4 d4" style="--l:23.4;--t:28.3;--w:12.8;--hh:6.2" src="assets/personal-dog.webp" alt="Low-poly dog illustration">
+
+</section>
+
+<!-- ============ CONTACTS ============ -->
+<footer class="sec contact" id="contact">
+  <p>Email <b><a href="mailto:sgscalalay@gmail.com">sgscalalay@gmail.com</a></b></p>
+  <p>Instagram <b><a href="https://instagram.com/itsjustsobrielle" target="_blank" rel="noopener">itsjustsobrielle</a></b></p>
+  <p>Facebook <b><a href="#" target="_blank" rel="noopener">Sophia Gabriella Calalay</a></b></p>
+  <p>LinkedIn <b><a href="#" target="_blank" rel="noopener">Sophia Gabrielle Calalay</a></b></p>
+</footer>
+
+<!-- ============ RESUME ============ -->
+<section class="resume" id="resume">
+  <a class="resume-card" href="RESUME%20-%20OFFICIAL.pdf" target="_blank" rel="noopener" aria-label="Open my resume (PDF)">
+    <img src="assets/Preview_Resume.png" alt="Preview of my resume">
+  </a>
+  <!-- <p class="resume-label"><a href="RESUME%20-%20OFFICIAL.pdf" target="_blank" rel="noopener">Resume · Open PDF ↗</a></p> -->
+</section>
+
+</main>
+
+<!-- Pop-up viewer for graphics (videos play inside their own card) -->
+<dialog id="lb" aria-label="Preview"><button class="x" aria-label="Close" onclick="lb.close()">×</button><div class="lbc"></div></dialog>
+
+<!-- Magazine viewer: a PDF turned into a flip-through book -->
+<dialog id="mag" aria-label="Magazine">
+  <button class="x" aria-label="Close" onclick="mag.close()">×</button>
+  <div class="magcol">
+    <p class="magmsg"></p>
+    <div class="magbar" hidden>
+      <button class="mnav" data-d="-1" aria-label="Previous page">‹</button>
+      <span class="magcount"></span>
+      <button class="mnav" data-d="1" aria-label="Next page">›</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Website preview bubble (shown while hovering a card that has a link) -->
+<div class="linkprev" id="lp" aria-hidden="true">
+  <img class="shot" alt="">
+  <div class="lpbar"><span class="lphost"></span><span>Click to visit ↗</span></div>
+</div>
+
+<script>
+/* =====================================================================
+   YOUR WORK: edit these lists. (The order here doesn't matter: every folder is
+   sorted automatically by year, then by title A to Z.)
+   t      = 'poster' | 'logo' | 'video'   (posters and logos both show under "Graphics")
+   src    = the file for the card. For a poster or logo, the image.
+            For a video, the .mp4 file itself (the card shows its first frame).
+            For a MAGAZINE, point src at the .pdf. Clicking the card opens it as a flip-through book,
+            and it shows under the "PDF" chip.
+   poster = (optional) a thumbnail/photo to show on the card instead of the first frame / page 1.
+            For a PDF this is its cover photo.
+   title  = name shown under the carousel (entries with no title are sorted last in their year)
+   desc   = YOUR SHORT DESCRIPTION shown under the title. It should START with the year
+            (like '2024 · ...'): that is what the sort reads. You can also set year:2024 directly.
+   full   = (optional, graphics) a different, bigger image to show in the pop-up
+   mp4    = (optional) the video file, if you would rather keep it separate from src
+   yt     = (YouTube videos) the YouTube link or the ID. Use a thumbnail with the same shape as the video as src.
+   link   = (optional) a website address. Hovering the card shows a preview of the site, clicking opens it.
+   preview= (optional, with link) your own screenshot (e.g. 'assets/savr-preview.webp') to use for the
+            hover preview instead of the automatic live screenshot.
+   ===================================================================== */
+const DATA={
+  org:[
+    {t:'video',src:'project/Organization/ACES_GA_wLogo.mp4',title:'ACES: General Assembly',desc:'2024 · Video Highlights of the Association of Civil Engineering Students\' General Assembly.'},
+    {t:'poster',src:'project/Organization/BonifacioDay.png',title:'Bonifacio Day Pubmat',desc:'2024 · A publication material, under the Innovators, to celebrate the father of the Philippine Revolution, Andres Bonifacio.'},
+    {t:'poster',src:'project/Organization/Candidates(Revised).png',title:'iTam Ambassador Candidates',desc:'2023 · A publication material opening page for Student Coordinating Council, Creatives Committee.'},
+    {t:'poster',src:'project/Organization/Handog Ngiti 2023_Registration QR.png',title:'Handog Ngiti Registration',desc:'2023 · A publication material registration for Student Coordinating Council, Creatives Committee.'},
+    {t:'poster',src:'project/Organization/Post-Event Highlight.png',title:'TICAP: To The Future and Beyond',desc:'2026 · Post Event Highlight Template in the theme of Arcane: League of Legends.'},
+    {t:'video',src:'project/Organization/SCC AVP 2023.mp4',title:'SCC: Audio-Visual Presentation',desc:'2023 · Student Coordinating Council\'s Audio-Visual Presentation as an introduction to the organization.'},
+    {t:'video',src:'project/Organization/SDE-KickOff.mp4',title:'Kick-Off Celebration',desc:'2023 · My first same-day edit and also first event in FEU Tech as a part of the Documentation Committee.'},
+    {t:'poster',src:'project/Organization/SomethingSeries.PG11-12-1.png',title:'Christmas: Something Series',desc:'2024 · A Christmas-themed posting by the Innovators.'},
+    {t:'poster',src:'project/Organization/Technoweek_1 (Rev).png',title:'Technoweek Countdown',desc:'2025 · A publication material countdown days for the school\'s yearly event.'},
+    {t:'poster',src:'project/Organization/Technoweek_Today (Rev).png',title:'Technoweek Countdown (D-DAY)',desc:'2025 · A publication material countdown days for the school\'s yearly event.'},
+    {t:'poster',src:'project/Organization/The Final Candidates_FRONT (revised).png',title:'iTam Ambassador Final Candidates',desc:'2023 · A publication material opening page for Student Coordinating Council, Creatives Committee.'},
+    {t:'poster',src:'project/Organization/TICAP 21 LOGO.png',title:'Ticap 26 Logo',desc:'2026 · Making a logo in the theme of Arcane: League of Legends'},
+    {t:'poster',src:'project/Organization/Title and BG Handog Ngiti.png',title:'Handog Ngiti Idea',desc:'2023 · One of the proposed idea for Christmas event.'},
+    {t:'video',src:'project/Organization/BOTB.png',yt:'https://youtu.be/KOFg6LjRRNA',title:'Battle of the Band x Rock of Aces',desc:'2025 · Video Highlights for Technoweek\'s Event.'},
+    {t:'video',src:'project/Organization/BINHI Highlights.png',yt:'https://youtu.be/45vETQpexB8',title:'BINHI: Building Innovative, Nationalistic, and Humane Individuals',desc:'2025 · Video Highlights for annual Student Leaders\' Congress organized by the FEU Institute of Technology.'},
+    {t:'video',src:'project/Organization/Innovator_PromoVid.png',yt:'https://youtu.be/C2nfyPDcMcQ',title:'The Innovators: Promotional Video',desc:'2025 · Editor of this promotional video to showcase the Innovator\'s officers.'},
+  ],
+  school:[
+    {t:'poster',src:'project/School Works/Artboard 1.png',title:'Login Portal',desc:'2024 · An activity in making a login page for FEU Institute of Technology in Photoshop.'},
+    {t:'poster',src:'project/School Works/CABRERA.png',title:'Line Art',desc:'2022 · Creating a line art of Benedicto Cabrera.'},
+    {t:'poster',src:'project/School Works/Calalay_Sophia_TW01_TSA2.png',title:'CoBite: Crave it. Buy it. Love it.',desc:'2024 · Activity in creating own brand poster.'},
+    {t:'poster',src:'project/School Works/CODEXA_Logo.png',title:'Codexa Logo',desc:'2026 · Creation of our capstone group logo.'},
+    {t:'poster',src:'project/School Works/CODEXA_ProjectPoster.png',title:'SAVR Project Poster',desc:'2026 · Creation of our capstone project poster.'},
+    {t:'poster',src:'project/School Works/COVID Connect.png',title:'Covid Connect',desc:'2024 · A user interface project that will only be made with Figma.'},
+    {t:'poster',src:'project/School Works/GoldenRatio_Calalay.png',title:'Golden Ratio',desc:'2024 · Creating a FEU Tech logo in your own rendition with only using Adobe Illustrator.'},
+    {t:'poster',src:'project/School Works/Infographics_Calalay.png',title:'Gender Equality',desc:'2024 · Making an Infographics focusing on Gender Equality.'},
+    {t:'poster',src:'project/School Works/Johari.png',title:'Johari\'s Window',desc:'2024 · Urgent. Less Urgent. Not Important. Optional.'},
+    {t:'poster',src:'project/School Works/DaBble.jpg',title:'DaBble',desc:'2024 · An activity in creating a user interface website idea.'},
+    {t:'poster',src:'project/School Works/NSTP MAGAZINE_Para sa Streets.pdf',poster:'project/School Works/NSTPCover.png',title:'NSTP Magazine',desc:'2024 · A project of documenting our National Service Training Program (NSTP) journey as a group.'},
+    {t:'poster',src:'project/School Works/Project by Sophia Calalay.png',title:'A Teacher to the Last',desc:'2026 · Activity of creating a poster about a teacher that gave an impact to your life.'},
+    {t:'poster',src:'project/School Works/SAVR Infographics.png',title:'SAVR: Research Poster',desc:'2026 · A capstone document based infographics poster.'},
+    {t:'poster',src:'project/School Works/SAVR Poster.png',title:'SAVR: Poster',desc:'2026 · A capstone project poster.'},
+    {t:'poster',src:'project/School Works/SAVR_FirstIdea.png',title:'SAVR: The First Version',desc:'2025 · The first idea of SAVR that I pitch for our Technoprenuership that won 1st runner-up, best project.'},
+    {t:'poster',src:'project/School Works/SAVR_WebnMobile.png',link:'https://savrdonate.com',title:'Capstone Project: SAVR',desc:'2026 · A Food Donation Management System with Meal Planning Optimization for the Philippine FoodBank Foundation Inc.'},
+    {t:'poster',src:'project/School Works/Website.png',title:'DabBle Website',desc:'2024 · A user interface project with the use of Photoshop and Figma.'},
+    {t:'poster',src:'project/School Works/Chel_Midterms.png',title:'Chel Diokno Poster',desc:'2026 · Poster making for someone who is an inspiration to many people.'},
+    {t:'video',src:'project/School Works/KALESA.png',yt:'https://youtu.be/TN1NgpcaUrs',title:'KALESA: The Documentary',desc:'2024 · Editor of the production of the reality of kutsero making a business inside the walls of Intramuros .'},
+    {t:'video',src:'project/School Works/OnlineDeception.png',yt:'https://youtu.be/F3T5fEeNcA0',title:'Online Deception',desc:'2023 · Directed and edited a nominated short film for the school\'s competition.'},
+    {t:'video',src:'project/School Works/Bacolod.png',yt:'https://youtu.be/j-dUHKVpgfI',title:'MassKara Festival',desc:'2024 ·  Directed and Edited of an Art Festival video competition for our Art Appreciation subject.'},
+    {t:'video',src:'project/School Works/SAVR_firstidea_Video.png',yt:'https://youtu.be/SrGmfBnjbY8',title:'SAVR: The First Version',desc:'2025 · The first idea of SAVR that I pitch for our Technoprenuership that won 1st runner-up, best project.'},
+    {t:'video',src:'project/School Works/SAVR_DemoVid.png',yt:'https://youtu.be/mxzH6uf2Ydg',title:'Capstone Project: SAVR Demonstration Video',desc:'2026 · A Food Donation Management System with Meal Planning Optimization for the Philippine FoodBank Foundation Inc.'},
+  ],
+  comm:[
+    {t:'poster',src:'project/Commission/CharityPoster.png',title:'Chess Competition for Charity',desc:'2024 · A poster prop for a 2010-themed short film called "Freddie" made by Luis Valmadrid.'},
+    {t:'poster',src:'project/Commission/Intrams 2024.png',title:'Intramurals Poster',desc:'2024 · A poster for the annual intramurals in La Consolacion College - Caloocan.'},
+    {t:'poster',src:'project/Commission/Kim_Midterms.png',title:'Kim Atienza Poster',desc:'2026 · A project commissioned by a college student.'},
+    {t:'poster',src:'project/Commission/Leni_Midterms.png',title:'Leni Robredo Poster',desc:'2026 · A project commissioned by a college student.'},
+    {t:'poster',src:'project/Commission/MOTOR POSTER 2.png',title:'Birthday Poster',desc:'2024 · A motor-themed birthday poster.'},
+    {t:'poster',src:'project/Commission/ONE.png',title:'Weddings at the Pen',desc:'2024 · A save-the-date poster event for the Peninsula Manila.'},
+    {t:'poster',src:'project/Commission/Pinooy Magical Treat_FB Banner.jpg',title:'Pinooy Magical Treat: Facebook Banner',desc:'2025 · A beauty and massage salon located in Trogir, Croatia.'},
+    {t:'poster',src:'project/Commission/Pinooy Magical Treat_Logo.jpg',title:'Pinooy Magical Treat: Logo',desc:'2025 · A beauty and massage salon located in Trogir, Croatia.'},
+    {t:'poster',src:'project/Commission/Pinooy Magical Treat_Valentines.png',title:'Pinooy Magical Treat: Valentines Pubmat',desc:'2026 · A beauty and massage salon located in Trogir, Croatia.'},
+    {t:'poster',src:'project/Commission/Pinooy Magical Treat_Voucher.png',title:'Pinooy Magical Treat: Voucher',desc:'2026 · A beauty and massage salon located in Trogir, Croatia.'},
+    {t:'poster',src:'project/Commission/Tournament.png',title:'Chess Competition',desc:'2024 · A poster prop for a 2010-themed short film called "Freddie" made by Luis Valmadrid.'},
+    {t:'poster',src:'project/Commission/Valorant Tournament.png',title:'Valorant Tournament',desc:'2024 · A poster tournament that was held online in a discord platform.'},
+    {t:'poster',src:'project/Commission/Vice_Midterms.png',title:'Vice Ganda Poster',desc:'2026 · A project commissioned by a college student'},
+    {t:'poster',src:'project/Commission/Vico_Midterms.png',title:'Vico Sotto Poster',desc:'2026 · A project commissioned by a college student'},
+    {t:'video',src:'project/Commission/Sadicon.hbd.V2.mp4',title:'Birthday Photoshoot',desc:'2026 · A birthday photoshoot highlights from Vietnam.'},
+    {t:'video',src:'project/Commission/Debut.png',yt:'https://youtu.be/4PAKn8a6K8w',title:'Debut Highlight',desc:'2025 · A short debut highlight for a client.'},
+  ],
+  personal:[
+    {t:'poster',src:'project/Personal/Aug 2023 (1).jpg',title:'',desc:'2023 · A digital art portrait of my family.'},
+    {t:'poster',src:'project/Personal/Aug 2023.jpg',title:'',desc:'2023 · A digital art portrait of a series in netflix called Bridgerton.'},
+    {t:'poster',src:'project/Personal/Cholo.png',title:'',desc:'2024 · A digital polygonal art of my dog using illustrator.'},
+    {t:'poster',src:'project/Personal/download (1).jpg',title:'',desc:'2025 · A birthday poster of my grandpa.'},
+    {t:'poster',src:'project/Personal/download (2).jpg',title:'',desc:'2024 · A digital art portrait of my grandparents.'},
+    {t:'poster',src:'project/Personal/PUB MAT by Sophia Calalay.png',title:'',desc:'2024 · My first time testing out the Adobe Photoshop.'}
+  ]
+};
+
+/* Pressed flowers tucked behind each folder's paper: [image name in /assets, CSS position/size] */
+const DECO={
+  org:[['daisy','right:-.2cqw;top:6cqw;width:7cqw;rotate:10deg'],['fern','left:.2cqw;bottom:2cqw;width:5cqw;rotate:-18deg']],
+  school:[['flower-lace','left:-.2cqw;top:8cqw;width:5.5cqw;rotate:-6deg'],['leaf','right:0;bottom:3cqw;width:6cqw;rotate:25deg']],
+  comm:[['flower-purple','right:0;bottom:4cqw;width:6.5cqw;rotate:12deg'],['daisy','left:0;top:5cqw;width:6cqw;rotate:-10deg']],
+  personal:[['lavender','right:.4cqw;top:3cqw;width:5.5cqw;rotate:6deg'],['leaf','left:.2cqw;bottom:3cqw;width:5.5cqw;rotate:-20deg']]
+};
+
+/* false = files are never enlarged past their own pixel size (they only shrink to fit the panel) */
+const UPSCALE=false;
+/* 'desc' = newest year first (2026, 2025, ...)   'asc' = oldest year first. Titles are always A to Z inside a year. */
+const YEAR_ORDER='desc';
+/* '_blank' = links open in a new tab   '_self' = the visitor leaves the portfolio */
+const LINK_TARGET='_blank';
+/* Filter chips. A chip hides itself in folders that have nothing for it. */
+const FILTERS=[['all','All'],['graphic','Graphics'],['video','Video'],['pdf','PDF']];
+const match=(it,f)=>f==='all'||(f==='video'?it.t==='video':f==='pdf'?!!it.pdf:(it.t!=='video'&&!it.pdf));
+
+/* ---------- Sort every folder: by year, then by title A to Z ---------- */
+const yearOf=it=>+(it.year||(/^\s*(\d{4})/.exec(it.desc||'')||[])[1])||0;
+const fileOf=it=>decodeURIComponent((it.src||it.mp4||'').split('/').pop()||'').replace(/\.[^.]+$/,'');
+const byYearThenTitle=(a,b)=>{
+  const ya=yearOf(a), yb=yearOf(b);
+  if((!ya)!==(!yb)) return ya?-1:1;                                   // entries with no year go last
+  if(ya!==yb) return YEAR_ORDER==='asc'?ya-yb:yb-ya;
+  const ta=(a.title||'').trim(), tb=(b.title||'').trim();
+  if((!ta)!==(!tb)) return ta?-1:1;                                   // untitled entries go last inside their year
+  return (ta||fileOf(a)).localeCompare(tb||fileOf(b),undefined,{numeric:true,sensitivity:'base'});
+};
+Object.values(DATA).forEach(list=>list.sort(byYearThenTitle));
+
+/* A video entry can point src straight at the video file. A PDF entry becomes a magazine.
+   Add poster:'assets/thumb.webp' to show a thumbnail instead. */
+const VID=/\.(mp4|webm|mov|m4v)(\?.*)?$/i, PDF=/\.pdf(\?.*)?$/i;
+Object.values(DATA).flat().forEach(it=>{
+  if(VID.test(it.src||'')){ it.mp4=it.mp4||it.src; it.src=it.poster||''; it.t='video'; }
+  else if(PDF.test(it.src||'')){ it.pdf=it.src; it.src=it.poster||''; it.t='poster'; }
+  else if(it.poster&&!it.src) it.src=it.poster;
+});
+/* a video card is a real <video>: it shows the first frame (or your poster) and plays right inside the card */
+const media=i=>i.mp4
+  ?`<video class="media" src="${i.mp4}#t=0.1" ${i.poster?`poster="${i.poster}"`:''} muted playsinline preload="metadata" aria-label="${i.title}"></video>`
+  :`<img class="media" ${i.src?`src="${i.src}" alt="${i.title}"`:'alt=""'}>`;
+const dim=m=>{const w=m.videoWidth||m.naturalWidth,h=m.videoHeight||m.naturalHeight;return w&&h?[w,h]:(m.tagName==='VIDEO'?[16,9]:[3,4]);};
+/* accepts a full YouTube link or just the ID */
+const ytId=s=>{const m=/(?:youtu\.be\/|[?&]v=|embed\/|shorts\/)([\w-]{11})/.exec(s||'');return m?m[1]:s;};
+
+const sec=document.querySelector('.projects'), lb=document.getElementById('lb'), box=lb.querySelector('.lbc');
+const panels=[...document.querySelectorAll('.panel')], tabs=[...document.querySelectorAll('.tab[data-k]')];
+
+/* ---------- Lazy-loaded libraries (only fetched when a magazine is needed) ---------- */
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+const PDFJS_WORKER='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const PAGEFLIP='https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js';
+const scripts={};
+const loadScript=u=>scripts[u]||(scripts[u]=new Promise((ok,no)=>{
+  const s=document.createElement('script'); s.src=u; s.onload=ok; s.onerror=()=>{delete scripts[u];no(new Error('Could not load '+u));};
+  document.head.appendChild(s);
+}));
+const pdfLib=async()=>{ await loadScript(PDFJS); pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_WORKER; return pdfjsLib; };
+const pdfDocs=new Map();
+const getPdf=url=>{
+  if(!pdfDocs.has(url)) pdfDocs.set(url,pdfLib().then(L=>L.getDocument(encodeURI(url)).promise).catch(e=>{pdfDocs.delete(url);throw e;}));
+  return pdfDocs.get(url);
+};
+/* draws one PDF page onto a canvas of the given pixel width and returns it as a JPEG */
+async function renderPage(pdf,n,width){
+  const pg=await pdf.getPage(n), v1=pg.getViewport({scale:1}), v=pg.getViewport({scale:width/v1.width});
+  const c=document.createElement('canvas'); c.width=Math.round(v.width); c.height=Math.round(v.height);
+  const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height);
+  await pg.render({canvasContext:g,viewport:v}).promise;
+  return {url:c.toDataURL('image/jpeg',.85),w:c.width,h:c.height};
+}
+const NOCOVER='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800"><rect width="600" height="800" fill="#6b5b7b"/><text x="300" y="410" fill="#fff" font-family="Georgia,serif" font-size="44" text-anchor="middle">Open PDF</text></svg>');
+
+/* Pop-up viewer (graphics only) */
+function show(it){
+  box.innerHTML=it.t==='video'
+    ?`<p class="hint">Add an mp4 file (mp4) or a YouTube link/ID (yt) for this video in the DATA list.</p>`
+    :`<img src="${it.full||it.src}" alt="${it.title}">`;
+  lb.showModal();
+}
+lb.addEventListener('close',()=>{box.innerHTML='';});
+lb.addEventListener('click',e=>{ if(!e.target.closest('img,.hint,.x')) lb.close(); });
+
+/* ---------- Magazine viewer ---------- */
+const mag=document.getElementById('mag'), magCol=mag.querySelector('.magcol'), magMsg=mag.querySelector('.magmsg'),
+      magBar=mag.querySelector('.magbar'), magCount=mag.querySelector('.magcount');
+const magPages=new Map();          // pdf url -> {imgs, ratio}  (rendered once, reused on reopen)
+let pf=null, host=null, magTok=0;
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const magFail=(it,err)=>{
+  magMsg.hidden=false;
+  magMsg.innerHTML=`The magazine couldn't open here. <a href="${encodeURI(it.pdf)}" target="_blank" rel="noopener">Open the PDF instead</a>`
+    +(err&&err.message?`<small>${esc(err.message)}</small>`:'');
+};
+function closeBook(){
+  try{ pf&&pf.destroy(); }catch(_){ }
+  pf=null; if(host){ host.remove(); host=null; }
+}
+async function openMagCore(it){
+  const tok=++magTok; closeBook();
+  magMsg.hidden=false; magMsg.textContent='Opening magazine…'; magBar.hidden=true;
+  if(!mag.open) mag.showModal();
+  try{
+    let data=magPages.get(it.pdf);
+    if(!data){
+      const pdf=await getPdf(it.pdf), n=pdf.numPages, imgs=[]; let ratio=1.4;
+      for(let i=1;i<=n;i++){
+        if(tok!==magTok) return;
+        magMsg.textContent=`Opening magazine… ${i}/${n}`;
+        const r=await renderPage(pdf,i,1000); imgs.push(r.url); if(i===1) ratio=r.h/r.w;
+      }
+      data={imgs,ratio}; magPages.set(it.pdf,data);
+    }
+    if(tok!==magTok) return;
+    /* fit the book to the screen: two pages side by side on wide screens, one page on phones */
+    const spreads=innerWidth>=700?2:1;
+    const pw=Math.floor(Math.min(innerWidth*.94/spreads,(innerHeight-120)/data.ratio)), ph=Math.floor(pw*data.ratio);
+    host=document.createElement('div'); host.className='book';
+    host.style.width=pw*spreads+'px'; host.style.height=ph+'px';
+    magCol.insertBefore(host,magBar);
+    magMsg.hidden=true;
+    pf=new St.PageFlip(host,{width:pw,height:ph,size:'stretch',minWidth:pw-1,maxWidth:pw*2,minHeight:ph-1,maxHeight:ph*2,
+      showCover:true,usePortrait:true,drawShadow:true,maxShadowOpacity:.5,flippingTime:700,mobileScrollSupport:false});
+    pf.loadFromImages(data.imgs);
+    const setCount=i=>{magCount.textContent=`${i+1} / ${data.imgs.length}`;};
+    setCount(0); pf.on('flip',e=>setCount(e.data));
+    magBar.hidden=false;
+  }catch(err){
+    if(tok!==magTok) return;
+    closeBook(); magBar.hidden=true; magFail(it,err);
+    console.error(err);
+  }
+}
+/* the page-flip script is needed before the first magazine opens */
+const _open=openMagCore;
+async function openMagWithLib(it){
+  magMsg.hidden=false; magMsg.textContent='Opening magazine…'; magBar.hidden=true;
+  if(!mag.open) mag.showModal();
+  try{ await loadScript(PAGEFLIP); }
+  catch(err){ magFail(it,err); return; }
+  _open(it);
+}
+mag.addEventListener('close',()=>{ magTok++; closeBook(); });
+mag.addEventListener('click',e=>{
+  const b=e.target.closest('.mnav');
+  if(b&&pf){ +b.dataset.d<0?pf.flipPrev():pf.flipNext(); return; }
+  if(!e.target.closest('.book,.magbar,.magmsg,.x')) mag.close();
+});
+
+/* ---------- Website preview bubble ---------- */
+const lp=document.getElementById('lp'), lpImg=lp.querySelector('.shot'), lpHost=lp.querySelector('.lphost');
+const shot=it=>it.preview||`https://s0.wp.com/mshots/v1/${encodeURIComponent(it.link)}?w=640&h=400`;
+const hostOf=u=>{try{return new URL(u).hostname.replace(/^www\./,'');}catch(_){return u;}};
+let lpFor=null;
+lpImg.addEventListener('error',()=>lp.classList.add('err'));
+function movePrev(e){
+  const w=lp.offsetWidth, h=lp.offsetHeight;
+  let x=e.clientX+18, y=e.clientY+18;
+  if(x+w>innerWidth-8) x=e.clientX-w-18;
+  if(y+h>innerHeight-8) y=e.clientY-h-18;
+  lp.style.left=Math.max(8,x)+'px'; lp.style.top=Math.max(8,y)+'px';
+}
+function showPrev(it,e){
+  if(lpFor!==it){ lpFor=it; lp.classList.remove('err'); lpImg.src=shot(it); lpHost.textContent=hostOf(it.link); }
+  lp.classList.add('on'); movePrev(e);
+}
+function hidePrev(){ lp.classList.remove('on'); lpFor=null; }
+
+/* Play a video inside its card, and stop it again */
+const stop=c=>{
+  const v=c.querySelector('video.media'), fr=c.querySelector('iframe');
+  if(v){ v.pause(); v.controls=false; v.muted=true; try{v.currentTime=.1;}catch(_){ } }
+  if(fr) fr.remove();
+  const pl=c.querySelector('.play'); if(pl) pl.hidden=false;
+  delete c.dataset.started;
+};
+const start=(c,it)=>{
+  if(c.dataset.started) return;
+  const v=c.querySelector('video.media');
+  if(v){
+    c.dataset.started='1';
+    const pl=c.querySelector('.play'); if(pl) pl.hidden=true;
+    v.muted=false; v.controls=true; v.play().catch(()=>{});
+  }else if(it.yt && it.yt!=='VIDEO_ID'){
+    c.dataset.started='1';
+    const pl=c.querySelector('.play'); if(pl) pl.hidden=true;
+    c.querySelector('.ph').insertAdjacentHTML('beforeend',`<iframe src="https://www.youtube.com/embed/${ytId(it.yt)}?autoplay=1&rel=0" style="position:absolute;inset:0;width:100%;height:100%;border:0" allow="autoplay; fullscreen" allowfullscreen title="${it.title}"></iframe>`);
+  }else show(it);
+};
+
+/* Build each folder's gallery (an endless loop) */
+panels.forEach(p=>{
+  const items=DATA[p.dataset.k]; let f='all', idx=0, sx=null, moved=false;
+  const last=new Map();                       // each card's previous position, used to spot the wrap-around
+  const badge=i=>(i.pdf?'<span class="badge">📖 Magazine</span>':'')+(i.link?'<span class="badge">↗ Visit site</span>':'');
+  /* only show chips that have something in this folder; hide the whole row if there is nothing to choose between */
+  const filters=FILTERS.filter(([k])=>k==='all'||items.some(i=>match(i,k)));
+  const chips=filters.length>2?`<div class="chips">${filters.map(([k,l])=>`<button class="chip" data-f="${k}">${l}</button>`).join('')}</div>`:'';
+  p.innerHTML=
+    `<div class="stack">
+       <div class="sheet"></div>
+       <div class="paper">
+         ${chips}
+         <div class="stage">${items.map(i=>`<figure class="card"><span class="ph">${media(i)}${i.t==='video'?'<span class="play">▶</span>':''}${badge(i)}</span></figure>`).join('')}</div>
+         <div class="nav-row">
+           <div class="cap"><b></b><p class="desc"></p><div class="dots"></div></div>
+         </div>
+       </div>
+     </div>`+(DECO[p.dataset.k]||[]).map(d=>`<img class="pd" src="assets/${d[0]}.webp" alt="" style="${d[1]}">`).join('');
+  const cards=[...p.querySelectorAll('.card')], stage=p.querySelector('.stage'), cap=p.querySelector('.cap');
+  p.stopAll=()=>cards.forEach(stop);
+
+  /* magazine covers: if a PDF has no poster photo, its cover is drawn from page 1 the first time the folder opens */
+  p.loadCovers=()=>{
+    if(p._covers) return; p._covers=1;
+    items.forEach((it,i)=>{
+      if(!it.pdf||it.poster) return;
+      const img=cards[i].querySelector('.media');
+      getPdf(it.pdf).then(pdf=>renderPage(pdf,1,700)).then(r=>{ img.alt=it.title; img.src=r.url; })
+        .catch(err=>{ img.alt=it.title; img.src=NOCOVER; console.error(err); });
+    });
+  };
+
+  const list=()=>items.map((_,i)=>i).filter(i=>match(items[i],f));
+  const S=a=>Math.max(.6,1-.14*a);
+
+  const draw=()=>{
+    const v=list(), n=v.length, sw=stage.clientWidth, sh=stage.clientHeight;
+    cards.forEach((c,i)=>{ if(!v.includes(i)){ c.hidden=true; last.delete(c); stop(c); } });
+    p.querySelectorAll('.chip').forEach(b=>b.classList.toggle('on',b.dataset.f===f));
+    if(!n){
+      cap.querySelector('b').textContent='Nothing here yet';
+      cap.querySelector('.desc').textContent='';
+      cap.querySelector('.dots').innerHTML='';
+      return;
+    }
+    if(!sw||!sh) return;
+    idx=((idx%n)+n)%n;
+    const gap=sw*.03, px=Math.max(6,sw*.008), pb=px;          // thin, even glass frame
+
+    /* d = shortest distance from the centre card, wrapping around the loop */
+    const E=v.map((i,q)=>{
+      let d=((q-idx)%n+n)%n; if(d>n/2) d-=n;
+      const [nw,nh]=dim(cards[i].querySelector('.media'));
+      let k=Math.min((sw*.5-2*px)/nw,(sh*.94-px-pb)/nh); if(!UPSCALE) k=Math.min(k,1);
+      return {i,d,w:nw*k+2*px,h:nh*k+px+pb,x:0};              // w/h include the frame, the file inside keeps its own shape
+    });
+    const right=E.filter(e=>e.d>0).sort((a,b)=>a.d-b.d), left=E.filter(e=>e.d<0).sort((a,b)=>b.d-a.d);
+    let prev=E.find(e=>e.d===0);
+    right.forEach(e=>{ e.x=prev.x+prev.w*S(Math.abs(prev.d))/2+gap+e.w*S(e.d)/2; prev=e; });
+    prev=E.find(e=>e.d===0);
+    left.forEach(e=>{ e.x=prev.x-prev.w*S(Math.abs(prev.d))/2-gap-e.w*S(-e.d)/2; prev=e; });
+    const r2=right.find(e=>e.d===2), l2=left.find(e=>e.d===-2);   // far cards wait stacked behind the 2nd card
+    right.forEach(e=>{ if(e.d>2&&r2) e.x=r2.x; });
+    left.forEach(e=>{ if(e.d<-2&&l2) e.x=l2.x; });
+
+    E.forEach(e=>{
+      const c=cards[e.i], a=Math.abs(e.d), was=last.get(c);
+      const jump=was!==undefined && Math.abs(e.d-was)>n/2;      // this card just wrapped around the loop
+      const fresh=c.hidden||was===undefined;
+      const ry=e.d===0?0:(e.d>0?1:-1)*(a===1?20:26);            // side cards angle inward in 3D
+      if(a) stop(c);                                             // a card that leaves the centre stops playing
+      c.hidden=false;
+      c.style.width=e.w+'px'; c.style.height=e.h+'px';
+      c.style.padding=`${px}px ${px}px ${pb}px`;
+      if(jump||fresh) c.style.transition='none';
+      if(jump) c.style.opacity=0;                                // jump across while invisible, then fade in
+      c.style.transform=`translate(-50%,-50%) translateX(${e.x}px) rotateY(${ry}deg) scale(${S(a)})`;
+      c.style.zIndex=9-a; c.style.pointerEvents=a>2?'none':'auto';
+      c.classList.toggle('on',!a);
+      if(jump||fresh){ void c.offsetWidth; c.style.transition=''; }
+      c.style.opacity=a>2?0:(a?.65:1);
+      last.set(c,e.d);
+    });
+
+    const it=items[v[idx]];
+    cap.querySelector('b').textContent=it.title;
+    cap.querySelector('.desc').textContent=it.desc||'';
+    cap.querySelector('.dots').innerHTML=n>1?v.map((_,q)=>`<i class="${q===idx?'on':''}"></i>`).join(''):'';
+  };
+
+  /* move the carousel by d cards (used by the keyboard arrows) */
+  p.step=d=>{ idx+=d; hidePrev(); draw(); };
+
+  p.addEventListener('click',e=>{
+    const chip=e.target.closest('.chip'), card=e.target.closest('.card');
+    if(chip){ f=chip.dataset.f; idx=0; hidePrev(); draw(); }
+    else if(card && !moved){
+      const i=cards.indexOf(card);
+      if(!card.classList.contains('on')){ idx=list().indexOf(i); draw(); }   // a side card first moves to the centre
+      else if(items[i].link){ hidePrev(); window.open(items[i].link,LINK_TARGET,LINK_TARGET==='_blank'?'noopener':''); } // a link card opens its website
+      else if(items[i].pdf) openMagWithLib(items[i]);                        // a PDF opens as a flip-through magazine
+      else if(items[i].t==='video') start(card,items[i]);                    // a video plays right in its card
+      else show(items[i]);                                                   // a graphic opens in the pop-up
+    }
+  });
+  stage.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.card[data-started]')){ sx=null; return; }          // dragging the seek bar must not swipe the carousel
+    sx=e.clientX; moved=false; hidePrev();
+  });
+  stage.addEventListener('pointerup',e=>{
+    if(sx===null) return; const dx=e.clientX-sx; sx=null;
+    if(Math.abs(dx)>40){ moved=true; idx+=dx<0?1:-1; draw(); }
+  });
+
+  /* Mouse wheel / trackpad: one step per scroll gesture while the pointer is over the carousel */
+  let acc=0, lock=0, reset=0;
+  stage.addEventListener('wheel',e=>{
+    if(e.ctrlKey||list().length<2) return;                                   // pinch-zoom and single items behave normally
+    e.preventDefault();
+    const now=performance.now(); if(now<lock) return;
+    let d=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;
+    if(e.deltaMode===1) d*=16;
+    acc+=d; clearTimeout(reset); reset=setTimeout(()=>{acc=0;},200);
+    if(Math.abs(acc)>=40){ idx+=acc>0?1:-1; acc=0; lock=now+380; hidePrev(); draw(); }
+  },{passive:false});
+
+  /* Hover preview for cards that have a link (mouse only) */
+  p.addEventListener('pointerover',e=>{
+    if(e.pointerType==='touch') return;
+    const c=e.target.closest('.card'); if(!c) return;
+    const it=items[cards.indexOf(c)]; if(it&&it.link) showPrev(it,e);
+  });
+  p.addEventListener('pointermove',e=>{ if(lpFor&&e.pointerType!=='touch') movePrev(e); });
+  p.addEventListener('pointerout',e=>{
+    const c=e.target.closest('.card'); if(c&&!c.contains(e.relatedTarget)) hidePrev();
+  });
+
+  cards.forEach(c=>{ const m=c.querySelector('.media'); m.addEventListener(m.tagName==='VIDEO'?'loadedmetadata':'load',draw); });
+  new ResizeObserver(draw).observe(stage);   /* redraws while the folder opens and when the window resizes */
+  draw();
+});
+
+/* Open / close folders (anything playing is stopped first) */
+tabs.forEach(t=>t.addEventListener('click',e=>{
+  e.preventDefault();
+  hidePrev();
+  panels.forEach(p=>p.stopAll());
+  const k=sec.dataset.open===t.dataset.k?'':t.dataset.k;
+  sec.dataset.open=k;
+  panels.forEach(p=>p.classList.toggle('open',p.dataset.k===k));
+  tabs.forEach(x=>x.setAttribute('aria-expanded',x.dataset.k===k));
+  const op=panels.find(p=>p.dataset.k===k); if(op) op.loadCovers();
+}));
+
+/* Arrow keys flip the open gallery (not while a video player has focus, so the arrows can still seek).
+   While the magazine is open they turn its pages instead. */
+document.addEventListener('keydown',e=>{
+  if(mag.open){
+    if(pf&&/^Arrow(Left|Right)$/.test(e.key)){ e.key==='ArrowLeft'?pf.flipPrev():pf.flipNext(); }
+    return;
+  }
+  const p=panels.find(x=>x.classList.contains('open'));
+  if(!p||lb.open||!/^Arrow(Left|Right)$/.test(e.key)) return;
+  if(document.activeElement&&document.activeElement.tagName==='VIDEO') return;
+  p.step(e.key==='ArrowLeft'?-1:1);
+});
+
+/* Resume peek: now just uses a static image in the HTML, no JS needed */
+</script>
+</body>
+</html>
